@@ -101,10 +101,17 @@ async function run() {
       }
     });
     // request
-    app.post('/request', async(req, res)=>{
+    app.post('/request', async (req, res) => {
       const data = req.body;
       data.createdAt = new Date();
       const result = await requestCollection.insertOne(data)
+      res.send(result)
+    })
+
+    app.get('/donar/request/:email', async (req, res) => {
+      const email = req.params.email;
+      const query = {DonarEmail: email};
+      const result = await requestCollection.find(query).toArray();
       res.send(result)
     })
 
