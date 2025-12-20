@@ -25,6 +25,7 @@ async function run() {
     await client.connect();
     const database = client.db('missionscic11DB');
     const userCollection = database.collection('user');
+    const requestCollection = database.collection('request');
 
     console.log("MongoDB connected");
 
@@ -99,6 +100,14 @@ async function run() {
         res.status(500).send({ message: 'Server error' });
       }
     });
+    // request
+    app.post('/request', async(req, res)=>{
+      const data = req.body;
+      data.createdAt = new Date();
+      const result = await requestCollection.insertOne(data)
+      res.send(result)
+    })
+
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. MongoDB is working!");
