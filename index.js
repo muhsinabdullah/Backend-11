@@ -32,16 +32,7 @@ async function run() {
     // Register User
     app.post('/users', async (req, res) => {
       try {
-        const { name, email, password, mainPhotoUrl, bloodGroup, role } = req.body;
-        if (!email || !role) {
-          return res.status(400).send({ message: 'Email and role are required' });
-        }
-
-        const allowedRoles = ['donar', 'requester'];
-        if (!allowedRoles.includes(role)) {
-          return res.status(400).send({ message: 'Invalid role selected' });
-        }
-
+        const { name, email, password, mainPhotoUrl, bloodGroup, district, upazila } = req.body;
 
         if (!email || !password) {
           return res.status(400).send({ message: 'Email and password are required' });
@@ -58,7 +49,10 @@ async function run() {
           password,
           photoURL: mainPhotoUrl || '',
           bloodGroup: bloodGroup || '',
-          role,
+          district,
+          upazila,
+          role: 'donar',
+          status: 'active',
           createdAt: new Date()
         };
 
