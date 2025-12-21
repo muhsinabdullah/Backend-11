@@ -25,7 +25,7 @@ async function run() {
     await client.connect();
     const database = client.db('missionscic11DB');
     const userCollection = database.collection('user');
-    const requestCollection = database.collection('request');
+    const requestCollection = database.collection('requests');
 
     console.log("MongoDB connected");
 
@@ -95,7 +95,7 @@ async function run() {
       }
     });
     // request
-    app.post('/request', async (req, res) => {
+    app.post('/requests', async (req, res) => {
       const data = req.body;
       data.createdAt = new Date();
       const result = await requestCollection.insertOne(data)
