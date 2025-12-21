@@ -1,3 +1,4 @@
+const { MongoClient, ServerApiVersion } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -8,7 +9,36 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const admin = require("firebase-admin");
+
+const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+//middleware
+const verifyFBToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).send({ message: 'Unauthorized access' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    const decodedUser = await admin.auth().verifyIdToken(token);
+
+    req.decoded_email = decodedUser.email;
+    next();
+  } catch (error) {
+    return res.status(401).send({ message: 'Unauthorized access' });
+  }
+}
+
+
 
 const uri = process.env.MONGO_URI || "mongodb+srv://missionscic11:l7W25T0psd2kVyKs@cluster0.a2ybfki.mongodb.net/?appName=Cluster0";
 
@@ -95,7 +125,7 @@ async function run() {
       }
     });
     // request
-    app.post('/requests', async (req, res) => {
+    app.post('/request', verifyFBToken, async (req, res) => {
       const data = req.body;
       data.createdAt = new Date();
       const result = await requestCollection.insertOne(data)
@@ -104,7 +134,7 @@ async function run() {
 
     app.get('/donar/request/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {DonarEmail: email};
+      const query = { DonarEmail: email };
       const result = await requestCollection.find(query).toArray();
       res.send(result)
     })
