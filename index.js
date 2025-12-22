@@ -61,6 +61,7 @@ async function run() {
     const database = client.db('missionscic11DB');
     const userCollection = database.collection('user');
     const requestCollection = database.collection('requests');
+    const paymentCollection = database.collection('payments');
 
     console.log("MongoDB connected");
 
@@ -187,10 +188,10 @@ async function run() {
       const session = await stripe.checkout.sessions.create({
         line_items: [
           {
-            price_data : {
-              currency:'usd',
+            price_data: {
+              currency: 'usd',
               unit_amount: amount,
-              product_data:{
+              product_data: {
                 name: 'please donate'
               }
             },
@@ -198,17 +199,43 @@ async function run() {
           },
         ],
         mode: 'payment',
-        metadata:{
-              donorName:information?.donarName
-            },
-            customer_email: information?.donarEmail,
-            success_url : `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url : `${process.env.SITE_DOMAIN}/payment-cancelled`
+        metadata: {
+          donorName: information?.donarName
+        },
+        customer_email: information?.donarEmail,
+        success_url: `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.SITE_DOMAIN}/payment-cancelled`
       });
-      res.send({url: session.url})
+      res.send({ url: session.url })
     })
 
+    app.post('/success-payment', async (req, res) => {
+      const { session_id } = req.query;
+      const session = await stripe.checkout.sessions.retrieve(
+        session_id
+      );
+      console.log(session);
+      const transactionId = session. payment_intent;
 
+      const isPaymentExist = await paymentCollection.findOne({transactionId})
+
+      if(isPaymentExist){
+        return
+      }
+
+      if(session.payment_status === 'paid'){
+        const paymentInfo = {
+          amount: session.amount_total/100,
+          currency: session.currency,
+          donarEmail: session.customer_email,
+          transactionId,
+          payment_status: session.payment_status,
+          paidAt: new Date()
+        }
+        const result = await paymentCollection.insertOne(paymentInfo)
+        return res.send(result)
+      }
+    })
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. MongoDB is working!");
