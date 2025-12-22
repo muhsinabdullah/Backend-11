@@ -57,7 +57,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const database = client.db('missionscic11DB');
     const userCollection = database.collection('user');
     const requestCollection = database.collection('requests');
@@ -260,7 +260,7 @@ async function run() {
       }
     })
 
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. MongoDB is working!");
   } catch (err) {
     console.error(err);
