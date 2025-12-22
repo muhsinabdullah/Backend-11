@@ -150,12 +150,30 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/donar/request/:email', async (req, res) => {
-      const email = req.params.email;
-      const query = { DonarEmail: email };
-      const result = await requestCollection.find(query).toArray();
-      res.send(result)
-    })
+app.get('/my-request', verifyFBToken, async (req, res) => {
+  try {
+    const email = req.decoded_email;
+
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+
+    const query = { requesterEmail: email };
+
+    const result = await requestCollection
+      .find(query)
+      .skip(page * size)
+      .limit(size)
+      .sort({ createdAt: -1 })
+      .toArray();
+    const totalRequest = await requestCollection.countDocuments(query);
+
+    res.status(200).send({request: result, totalRequest});
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'Server error' });
+  }
+});
+
 
 
     await client.db("admin").command({ ping: 1 });
