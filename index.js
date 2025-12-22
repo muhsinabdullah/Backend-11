@@ -179,6 +179,29 @@ async function run() {
         res.status(500).send({ message: 'Server error' });
       }
     });
+    app.get('/search-requests', async (req, res) => {
+      try {
+        const { bloodGroup, district, upazila } = req.query;
+
+        const query = {};
+        if (bloodGroup) {
+          const fixed = bloodGroup.replace(/ /g, "+").trim();
+          query.bloodGroup = fixed;
+        }
+        if (district) {
+          query.recipient_district = district;
+        }
+        if (upazila) {
+          query.recipient_upazila = upazila;
+        }
+
+        const result = await requestCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: 'Server Error' });
+      }
+    });
 
     //payment
     app.post('/create-payment-checkout', async (req, res) => {
@@ -215,17 +238,17 @@ async function run() {
         session_id
       );
       console.log(session);
-      const transactionId = session. payment_intent;
+      const transactionId = session.payment_intent;
 
-      const isPaymentExist = await paymentCollection.findOne({transactionId})
+      const isPaymentExist = await paymentCollection.findOne({ transactionId })
 
-      if(isPaymentExist){
+      if (isPaymentExist) {
         return
       }
 
-      if(session.payment_status === 'paid'){
+      if (session.payment_status === 'paid') {
         const paymentInfo = {
-          amount: session.amount_total/100,
+          amount: session.amount_total / 100,
           currency: session.currency,
           donarEmail: session.customer_email,
           transactionId,
