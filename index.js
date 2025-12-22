@@ -93,20 +93,7 @@ async function run() {
         res.status(500).send({ message: 'Server error' });
       }
     });
-
-    // Get User Role
-    app.get('/users/role/:email', async (req, res) => {
-      try {
-        const email = req.params.email;
-        const user = await userCollection.findOne({ email });
-        if (!user) return res.status(404).send({ message: 'User not found' });
-        res.send({ role: user.role });
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ message: 'Server error' });
-      }
-    });
-
+        
     // Login User
     app.post('/login', async (req, res) => {
       try {
@@ -124,6 +111,37 @@ async function run() {
         res.status(500).send({ message: 'Server error' });
       }
     });
+
+    app.get('/users', verifyFBToken, async (req, res) =>{
+      const result = await userCollection.find().toArray();
+      res.status(200).send(result)
+    })
+
+    
+    app.get('/users/role/:email', async (req, res) => {
+      try {
+        const email = req.params.email;
+        const user = await userCollection.findOne({ email });
+        if (!user) return res.status(404).send({ message: 'User not found' });
+        res.send({ role: user.role });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: 'Server error' });
+      }
+    });
+
+    app.patch('/update/user/status', verifyFBToken, async (req, res)=>{
+      const {email, status} = req.query;
+      const query = {email:email}
+      const updateStatus = {
+        $set: {
+          status: status
+        }
+      }
+       const result = await userCollection.updateOne(query, updateStatus)
+       res.send(result)
+    })
+
     // request
     app.post('/request', verifyFBToken, async (req, res) => {
       const data = req.body;
