@@ -1,3 +1,4 @@
 node_modules
 .env
 warmpaws.json
+.vercel
