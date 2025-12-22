@@ -2,6 +2,9 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const stripe = require('stripe')(process.env.STRIPE_SECRATE);
+
+const crypto = require('crypto')
 
 const port = process.env.PORT || 5000;
 const app = express();
@@ -10,6 +13,8 @@ app.use(cors());
 app.use(express.json());
 
 const admin = require("firebase-admin");
+const { log } = require('console');
+const { url } = require('inspector');
 
 const decoded = Buffer.from(process.env.FB_SERVICE_KEY, 'base64').toString('utf8')
 const serviceAccount = JSON.parse(decoded);
@@ -93,7 +98,7 @@ async function run() {
         res.status(500).send({ message: 'Server error' });
       }
     });
-        
+
     // Login User
     app.post('/login', async (req, res) => {
       try {
@@ -112,12 +117,12 @@ async function run() {
       }
     });
 
-    app.get('/users', verifyFBToken, async (req, res) =>{
+    app.get('/users', verifyFBToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.status(200).send(result)
     })
 
-    
+
     app.get('/users/role/:email', async (req, res) => {
       try {
         const email = req.params.email;
@@ -130,16 +135,16 @@ async function run() {
       }
     });
 
-    app.patch('/update/user/status', verifyFBToken, async (req, res)=>{
-      const {email, status} = req.query;
-      const query = {email:email}
+    app.patch('/update/user/status', verifyFBToken, async (req, res) => {
+      const { email, status } = req.query;
+      const query = { email: email }
       const updateStatus = {
         $set: {
           status: status
         }
       }
-       const result = await userCollection.updateOne(query, updateStatus)
-       res.send(result)
+      const result = await userCollection.updateOne(query, updateStatus)
+      res.send(result)
     })
 
     // request
@@ -150,29 +155,58 @@ async function run() {
       res.send(result)
     })
 
-app.get('/my-request', verifyFBToken, async (req, res) => {
-  try {
-    const email = req.decoded_email;
+    app.get('/my-request', verifyFBToken, async (req, res) => {
+      try {
+        const email = req.decoded_email;
 
-    const page = parseInt(req.query.page) || 0;
-    const size = parseInt(req.query.size) || 10;
+        const page = parseInt(req.query.page) || 0;
+        const size = parseInt(req.query.size) || 10;
 
-    const query = { requesterEmail: email };
+        const query = { requesterEmail: email };
 
-    const result = await requestCollection
-      .find(query)
-      .skip(page * size)
-      .limit(size)
-      .sort({ createdAt: -1 })
-      .toArray();
-    const totalRequest = await requestCollection.countDocuments(query);
+        const result = await requestCollection
+          .find(query)
+          .skip(page * size)
+          .limit(size)
+          .sort({ createdAt: -1 })
+          .toArray();
+        const totalRequest = await requestCollection.countDocuments(query);
 
-    res.status(200).send({request: result, totalRequest});
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
+        res.status(200).send({ request: result, totalRequest });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: 'Server error' });
+      }
+    });
+
+    //payment
+    app.post('/create-payment-checkout', async (req, res) => {
+      const information = req.body;
+      const amount = parseInt(information.donateAmount) * 100;
+
+      const session = await stripe.checkout.sessions.create({
+        line_items: [
+          {
+            price_data : {
+              currency:'usd',
+              unit_amount: amount,
+              product_data:{
+                name: 'please donate'
+              }
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        metadata:{
+              donorName:information?.donarName
+            },
+            customer_email: information?.donarEmail,
+            success_url : `${process.env.SITE_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url : `${process.env.SITE_DOMAIN}/payment-cancelled`
+      });
+      res.send({url: session.url})
+    })
 
 
 
